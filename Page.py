@@ -2,10 +2,6 @@ import cv2
 import numpy as np
 from pytesseract import image_to_string
 import pytesseract
-import imutils
-from PIL import Image
-import PIL.Image
-import os
 
 
 def pre_process(img):
@@ -76,15 +72,16 @@ def sort_contours(cnts, method="left-to-right"):
 	return (cnts, boundingBoxes)
 
 
+def img_rescaling(new_img):
+        row,col = new_img.shape[:2]  
+        row=row*1.2
+        col=col*1.2
+        new_img=cv2.resize(new_img,(int(col),int(row)))
+        return new_img
+
+
 def img_to_Text(img):
     output = pytesseract.image_to_string(img)
     return output
-
-
-def emptyDIR(dir_name):
-        test = os.listdir(dir_name)   
-        for item in test:
-            if item.endswith(".TIFF"):
-                    os.remove(os.path.join(dir_name, item))
 
 
