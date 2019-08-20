@@ -7,6 +7,7 @@ from PIL import Image
 import PIL.Image
 import os
 
+
 def pre_process(img):
     #blurr image to smooth 
     blurr = cv2.GaussianBlur(img, (3,3),0)
@@ -18,60 +19,72 @@ def pre_process(img):
     grey = cv2.filter2D(grey, -1, kernel)
     
     _,thresh = cv2.threshold(grey,150,255,cv2.THRESH_BINARY_INV)
-        
-    # MAX_THRESHOLD_VALUE = 255
-    # BLOCK_SIZE = 15
-    # THRESHOLD_CONSTANT = 0
-
-    
-    # # Filter image
-    # filtered = cv2.adaptiveThreshold(grey, MAX_THRESHOLD_VALUE, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, BLOCK_SIZE, THRESHOLD_CONSTANT)
-
     
     return thresh
 
-def find_table(thresh, isTable):
-    #Extract cols and rows of image
-    height, width = thresh.shape[:2]
-    scale = 35 #play with this variable in order to increase/decrease the amount of lines to be detected
+
+def find_table(thresh, img):
+
+        # Defining a kernel length
+    kernel_length = np.array(img).shape[1]//80
+        # A verticle kernel of (1 X kernel_length), which will detect all the verticle lines from the image.
+    verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, kernel_length))
+        # A horizontal kernel of (kernel_length X 1), which will help to detect all the horizontal line from the image.
+    horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_length, 1)) 
+        # A kernel of (3 X 3) ones.
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))    
+    # Morphological operation to detect vertical lines from an image
+    img_temp1 = cv2.erode(thresh, verticalStructure, iterations=3)
+    vertical = cv2.dilate(img_temp1, verticalStructure, iterations=3)
     
-    #Specify size on horizontal axis
-    horizontalsize =  int(width / scale)
-    verticalsize = int(height / scale)
+    img_temp2 = cv2.erode(thresh, horizontalStructure, iterations=3)
+    horizontal = cv2.dilate(img_temp2, horizontalStructure, iterations=3)
+ # Weighting parameters, this will decide the quantity of an image to be added to make a new image.
+    alpha = 0.5
+    beta = 1.0 - alpha   
+    # This function helps to add two image with specific weight parameter to get a third image as summation of two image.
+    img_final_bin = cv2.addWeighted(vertical, alpha, horizontal, beta, 0.0)
+    img_final_bin = cv2.erode(~img_final_bin, kernel, iterations=2)
+    (thresh, img_final_bin) = cv2.threshold(img_final_bin, 128,255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     
-    #Create structure element for extracting horizontal lines through morphology operations
-    horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT,(horizontalsize,1))
-    verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT,(1,verticalsize))
-    
-    #Apply morphology operations
-    horizontal = cv2.erode(thresh,horizontalStructure)
-    horizontal = cv2.dilate(horizontal,horizontalStructure)
-    
-    vertical = cv2.erode(thresh,verticalStructure)
-    vertical = cv2.dilate(vertical,verticalStructure)
-    
-    if isTable==1:
-        return vertical
-    
-    table=horizontal+vertical
+    table=img_final_bin
 
     return table
-    
-def img_to_Text(path,QA_flag):
-    output = 'Start'+'\n'+'----------------------------'+'\n'
 
-    n = cv2.imread(path)
-    output = pytesseract.image_to_string(n,lang='Eng')
-    if QA_flag==0:
-            np.savetxt('Questions.txt',[output], fmt='%s')
-    elif QA_flag==1:
-            np.savetxt('Answers.txt',[output], fmt='%s')
-    else:
-            np.savetxt('Table.txt',[output], fmt='%s')
-    dir_name = "Tables/"
-    test = os.listdir(dir_name)   
-    for item in test:
-            if item.endswith(".png"):
+
+def sort_contours(cnts, method="left-to-right"):
+    	# initialize the reverse flag and sort index
+	reverse = False
+	i = 0
+ 
+	# handle if we need to sort in reverse
+	if method == "right-to-left" or method == "bottom-to-top":
+		reverse = True
+ 
+	# handle if we are sorting against the y-coordinate rather than
+	# the x-coordinate of the bounding box
+	if method == "top-to-bottom" or method == "bottom-to-top":
+		i = 1
+ 
+	# construct the list of bounding boxes and sort them from top to
+	# bottom
+	boundingBoxes = [cv2.boundingRect(c) for c in cnts]
+	(cnts, boundingBoxes) = zip(*sorted(zip(cnts, boundingBoxes),
+		key=lambda b:b[1][i], reverse=reverse))
+ 
+	# return the list of sorted contours and bounding boxes
+	return (cnts, boundingBoxes)
+
+
+def img_to_Text(img):
+    output = pytesseract.image_to_string(img)
+    return output
+
+
+def emptyDIR(dir_name):
+        test = os.listdir(dir_name)   
+        for item in test:
+            if item.endswith(".TIFF"):
                     os.remove(os.path.join(dir_name, item))
 
 
