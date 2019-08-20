@@ -38,8 +38,6 @@ for c in contours:
             else:
                 #    new_img=Page.pre_process(new_img)
                    As+='->'+Page.img_to_Text(new_img)+'\n'
-            cv2.imshow("Box",new_img)
-            cv2.waitKey(0)
 
 print("Questions")
 print(Qs)
