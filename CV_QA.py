@@ -15,7 +15,7 @@ a_path="Tables/Answers/"
 Page.emptyDIR(q_path)
 Page.emptyDIR(a_path)
 
-img = cv2.imread("input_images/1w.jpeg",1)
+img = cv2.imread("input_images/1.jpeg",1)
 thresh = Page.pre_process(img)
 table = Page.find_table(thresh, img)
 # Find contours for image, which will detect all the boxes
@@ -40,7 +40,7 @@ for c in contours:
                    As+='->'+Page.img_to_Text(new_img)+'\n'
             cv2.imshow("Box",new_img)
             cv2.waitKey(0)
-            
+
 print("Questions")
 print(Qs)
 print("Answers")
